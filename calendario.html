@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Calendario - Torneos Osone Go</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light p-4">
+    <div class="container">
+        <a href="index.html" class="btn btn-secondary mb-3">← Regresar a la Tabla General</a>
+        <h2 class="fw-bold">📅 Calendario de Encuentros</h2>
+        
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <select id="sel-division" class="form-select">
+                    <option value="Primera División">Primera División</option>
+                    <option value="Segunda División">Segunda División</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="sel-jornada" class="form-select"></select>
+            </div>
+        </div>
+
+        <div id="contenedor-partidos" class="row">
+            </div>
+    </div>
+
+    <script>
+        async function cargarDatos() {
+            // Cargar jornadas disponibles
+            const resJornadas = await fetch('http://127.0.0.1:8000/jornadas').then(r => r.json());
+            const selJornada = document.getElementById('sel-jornada');
+            resJornadas.jornadas.forEach(j => {
+                selJornada.innerHTML += `<option value="${j.jornada}">Jornada ${j.jornada}</option>`;
+            });
+
+            // Cargar partidos al cambiar filtros
+            document.querySelectorAll('select').forEach(el => el.addEventListener('change', buscarPartidos));
+            buscarPartidos();
+        }
+
+        async function buscarPartidos() {
+            const div = document.getElementById('sel-division').value;
+            const jor = document.getElementById('sel-jornada').value;
+            const res = await fetch(`http://127.0.0.1:8000/partidos/${div}/${jor}`).then(r => r.json());
+            
+            const cont = document.getElementById('contenedor-partidos');
+            cont.innerHTML = '';
+            res.partidos.forEach(p => {
+                let marcador = p.estatus === 'Jugado' ? `<h3 class="text-center text-primary mt-2">${p.goles_local} - ${p.goles_visitante}</h3>` : `<h5 class="text-center text-muted mt-2">VS</h5>`;
+                
+                cont.innerHTML += `
+                    <div class="col-md-4">
+                        <div class="card mb-3 shadow-sm border-0">
+                            <!-- AQUÍ AGREGAMOS EL DÍA Y LA HORA JUNTOS -->
+                            <div class="card-header bg-dark text-white text-center fw-bold">
+                                🗓️ ${p.dia || 'Por definir'} | ⏰ ${p.hora} HRS
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title text-center mb-3">${p.local} <br><small class="text-muted">vs</small><br> ${p.visitante}</h5>
+                                <p class="text-center text-muted mb-0"><small>Estado: ${p.estatus} | Campo: ${p.id_campo}</small></p>
+                                ${marcador}
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        }
+        cargarDatos();
+    </script>
+</body>
+</html>

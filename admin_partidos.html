@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Registro de Partidos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <script>
+        if (sessionStorage.getItem('admin_auth') !== 'concedido') {
+            window.location.replace('login.html');
+        }
+    </script>
+</head>
+<body class="bg-light p-5">
+    
+    <div class="container mb-4" style="max-width: 800px;">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 p-3 bg-white">
+                    <h5 class="fw-bold text-primary border-bottom pb-2">🛡️ Nuevo Equipo</h5>
+                    <form id="form-nuevo-equipo" class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Nombre del Equipo:</label>
+                            <input type="text" name="nombre_equipo" class="form-control form-control-sm" required placeholder="Ej. Chivas Toluca">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">División:</label>
+                            <select id="select-division-equipo" name="id_division" class="form-select form-select-sm" required></select>
+                        </div>
+                        <div class="col-12 text-end mt-2">
+                            <button type="submit" class="btn btn-primary btn-sm w-100">Guardar Equipo</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0 p-3 bg-white">
+                    <h5 class="fw-bold text-primary border-bottom pb-2">🏃 Nuevo Jugador</h5>
+                    <form id="form-nuevo-jugador" class="row g-2">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Nombre Completo:</label>
+                            <input type="text" name="nombre_completo" class="form-control form-control-sm" required placeholder="Nombre del jugador">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Equipo:</label>
+                            <select id="select-equipo-jugador" name="id_equipo" class="form-select form-select-sm" required></select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Posición:</label>
+                            <select name="posicion" class="form-select form-select-sm" required>
+                                <option value="Portero">Portero</option>
+                                <option value="Defensa">Defensa</option>
+                                <option value="Medio">Medio</option>
+                                <option value="Delantero">Delantero</option>
+                            </select>
+                        </div>
+                        <div class="col-12 text-end mt-2">
+                            <button type="submit" class="btn btn-primary btn-sm w-100">Guardar Jugador</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container bg-white p-4 rounded shadow" style="max-width: 800px;">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+            <h3 class="fw-bold m-0 text-dark">⚽ Registrar Nuevo Partido</h3>
+            <div>
+                <a href="index.html" class="btn btn-outline-secondary btn-sm me-2">Ver Sitio Público</a>
+                <button onclick="cerrarSesion()" class="btn btn-danger btn-sm shadow-sm">Cerrar Sesión</button>
+            </div>
+        </div>
+        
+        <form id="form-partido" class="row g-3">
+            <div class="col-12 mb-2">
+                <label class="form-label fw-bold text-primary">1. Filtrar por División:</label>
+                <select id="filtro-division" class="form-select border-primary shadow-sm fw-bold">
+                    <option value="Primera División" selected>Primera División</option>
+                    <option value="Segunda División">Segunda División</option>
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Equipo Local:</label>
+                <select id="local" name="id_local" class="form-select"></select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Equipo Visitante:</label>
+                <select id="visitante" name="id_visitante" class="form-select"></select>
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Jornada:</label>
+                <input type="number" name="jornada" class="form-control" value="1" min="1">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Campo:</label>
+                <input type="number" name="id_campo" class="form-control" value="1" min="1">
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Día (Fecha):</label>
+                <input type="date" name="dia" class="form-control" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Hora:</label>
+                <input type="time" name="hora" class="form-control" value="08:00" required>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Estatus:</label>
+                <select name="estatus" class="form-select">
+                    <option value="Programado" selected>Programado</option>
+                    <option value="Jugado">Jugado</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Tipo de Partido:</label>
+                <select name="tipo_partido" class="form-select">
+                    <option value="Liga" selected>Liga</option>
+                    <option value="Copa">Copa</option>
+                    <option value="Amistoso">Amistoso</option>
+                    <option value="Liguilla">Liguilla</option>
+                </select>
+            </div>
+            
+            <div class="col-12 mt-4 text-end">
+                <button type="submit" class="btn btn-success btn-lg px-5 shadow-sm">Guardar Partido</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="container bg-white p-4 rounded shadow mt-4" style="max-width: 800px;">
+        <h4 class="fw-bold text-danger border-bottom pb-2">🗑️ Zona de Peligro: Eliminar Partido</h4>
+        <div class="row g-3 mt-2 align-items-end">
+            <div class="col-md-9">
+                <label class="form-label fw-bold">Selecciona el partido que deseas borrar:</label>
+                <select id="select-borrar" class="form-select border-danger">
+                </select>
+            </div>
+            <div class="col-md-3 text-end">
+                <button id="btn-borrar" class="btn btn-danger w-100 shadow-sm">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container bg-white p-4 rounded shadow mt-4 mb-5" style="max-width: 800px;">
+        <h4 class="fw-bold text-success border-bottom pb-2">📋 Cargar Resultados y Estadísticas</h4>
+        
+        <div class="row g-3 mt-2">
+            <div class="col-12">
+                <label class="form-label fw-bold">Selecciona un partido pendiente para registrar el acta:</label>
+                <select id="select-resultado" class="form-select border-success fw-bold"></select>
+            </div>
+        </div>
+
+        <div id="panel-estadisticas" class="d-none mt-4">
+            <div class="row mb-3 align-items-center">
+                <div class="col-5 text-center">
+                    <h5 id="titulo-local" class="fw-bold text-primary">Local</h5>
+                    <input type="number" id="marcador-local" class="form-control form-control-lg text-center mx-auto w-50 fw-bold" value="0" min="0">
+                </div>
+                <div class="col-2 text-center fw-bold fs-4 text-muted">VS</div>
+                <div class="col-5 text-center">
+                    <h5 id="titulo-visitante" class="fw-bold text-danger">Visitante</h5>
+                    <input type="number" id="marcador-visitante" class="form-control form-control-lg text-center mx-auto w-50 fw-bold" value="0" min="0">
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-6 border-end">
+                    <h6 class="bg-primary text-white text-center p-2 rounded">Plantilla Local</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle">
+                            <thead class="table-light">
+                                <tr><th>Jugador</th><th title="Goles">⚽</th><th title="Asistencias">👟</th><th title="Amarillas">🟨</th><th title="Rojas">🟥</th><th title="Jugó">🏃</th></tr>
+                            </thead>
+                            <tbody id="tabla-local"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h6 class="bg-danger text-white text-center p-2 rounded">Plantilla Visitante</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle">
+                            <thead class="table-light">
+                                <tr><th>Jugador</th><th title="Goles">⚽</th><th title="Asistencias">👟</th><th title="Amarillas">🟨</th><th title="Rojas">🟥</th><th title="Jugó">🏃</th></tr>
+                            </thead>
+                            <tbody id="tabla-visitante"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-end mt-4">
+                <button id="btn-guardar-resultados" class="btn btn-success btn-lg px-5 shadow">Guardar Acta del Partido</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales para compartir datos entre los paneles
+        let todosLosEquipos = [];
+        let listaPartidosGlobal = []; 
+
+        // Función para destruir el pase y salir del administrador
+        function cerrarSesion() {
+            sessionStorage.removeItem('admin_auth');
+            window.location.href = 'login.html';
+        }
+
+        async function cargarEquipos() {
+            try {
+                const res = await fetch('http://127.0.0.1:8000/lista_equipos').then(r => r.json());
+                todosLosEquipos = res.equipos;
+                renderizarEquiposPorDivision('Primera División');
+            } catch (error) {
+                console.error("Error al conectar con la API:", error);
+            }
+        }
+
+        async function renderizarJugadores(idEquipo, idTbody) {
+            const res = await fetch(`http://127.0.0.1:8000/jugadores_equipo/${idEquipo}`).then(r => r.json());
+            const tbody = document.getElementById(idTbody);
+            
+            tbody.innerHTML = res.jugadores.map(j => {
+                const esPortero = j.posicion.toLowerCase().includes('portero') || j.posicion.toLowerCase().includes('arquero') || j.posicion.toLowerCase().includes('goalkeeper');
+                
+                return `
+                <tr class="fila-jugador" data-id="${j.id_jugador}" data-portero="${esPortero}">
+                    <td style="font-size: 0.85rem;">
+                        <span class="fw-bold">${j.nombre_completo}</span> 
+                        <br><small class="text-muted">${j.posicion}</small>
+                    </td>
+                    <td style="width: 55px;"><input type="number" class="form-control form-control-sm i-goles px-1" value="0" min="0"></td>
+                    <td style="width: 55px;"><input type="number" class="form-control form-control-sm i-asis px-1" value="0" min="0"></td>
+                    <td style="width: 55px;"><input type="number" class="form-control form-control-sm i-ama px-1" value="0" min="0"></td>
+                    <td style="width: 55px;"><input type="number" class="form-control form-control-sm i-roj px-1" value="0" min="0"></td>
+                    <td style="width: 40px;" class="text-center">
+                        <input type="checkbox" class="form-check-input i-jugo" title="¿Tuvo actividad en el partido?" checked>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        // FUNCIONES DE CARGA Y ACTUALIZACIÓN
+        async function cargarPartidosParaBorrar() {
+            try {
+                const res = await fetch('http://127.0.0.1:8000/todos_los_partidos').then(r => r.json());
+                listaPartidosGlobal = res.partidos; // Guardamos globalmente
+                
+                const selectBorrar = document.getElementById('select-borrar');
+                const selectResultado = document.getElementById('select-resultado');
+                
+                if (res.partidos.length === 0) {
+                    selectBorrar.innerHTML = '<option value="">No hay partidos registrados</option>';
+                    selectResultado.innerHTML = '<option value="">No hay partidos pendientes</option>';
+                    return;
+                }
+
+                // Cargar lista para borrar
+                selectBorrar.innerHTML = '<option value="">-- Elige partido a borrar --</option>' + res.partidos.map(p => 
+                    `<option value="${p.id_partido}">ID: ${p.id_partido} | J${p.jornada} | ${p.local} vs ${p.visitante} (${p.dia})</option>`
+                ).join('');
+
+                // Cargar lista para resultados (Solo los Programados)
+                const pendientes = res.partidos.filter(p => p.estatus === 'Programado');
+                selectResultado.innerHTML = '<option value="">-- Elige un partido para capturar acta --</option>' + 
+                    pendientes.map(p => `<option value="${p.id_partido}">J${p.jornada} | ${p.local} vs ${p.visitante}</option>`).join('');
+
+            } catch (error) {
+                console.error("Error al cargar partidos:", error);
+            }
+        }
+
+        // --- LISTENERS ---
+
+        // Abrir panel de estadísticas al seleccionar partido
+        document.getElementById('select-resultado').addEventListener('change', (e) => {
+            const idPartido = parseInt(e.target.value);
+            const panel = document.getElementById('panel-estadisticas');
+            if (!idPartido) { panel.classList.add('d-none'); return; }
+
+            const partido = listaPartidosGlobal.find(p => p.id_partido === idPartido);
+            document.getElementById('titulo-local').innerText = partido.local;
+            document.getElementById('titulo-visitante').innerText = partido.visitante;
+            
+            renderizarJugadores(partido.id_local, 'tabla-local');
+            renderizarJugadores(partido.id_visitante, 'tabla-visitante');
+            panel.classList.remove('d-none');
+        });
+
+        // Guardar Resultados
+        document.getElementById('btn-guardar-resultados').addEventListener('click', async () => {
+            const idPartido = document.getElementById('select-resultado').value;
+            const golesLocal = document.getElementById('marcador-local').value;
+            const golesVisitante = document.getElementById('marcador-visitante').value;
+
+            if (!idPartido) { alert("Por favor, selecciona un partido."); return; }
+
+            let statsJugadores = [];
+            
+            document.querySelectorAll('.fila-jugador').forEach(fila => {
+                const jugo = fila.querySelector('.i-jugo').checked;
+                const goles = parseInt(fila.querySelector('.i-goles').value) || 0;
+                const asistencias = parseInt(fila.querySelector('.i-asis').value) || 0;
+                const amarillas = parseInt(fila.querySelector('.i-ama').value) || 0;
+                const rojas = parseInt(fila.querySelector('.i-roj').value) || 0;
+                const esPortero = fila.dataset.portero === "true";
+
+                if (jugo || goles > 0 || asistencias > 0 || amarillas > 0 || rojas > 0) {
+                    statsJugadores.push({
+                        id_jugador: parseInt(fila.dataset.id),
+                        goles: goles, asistencias: asistencias, amarillas: amarillas, rojas: rojas, es_portero: esPortero
+                    });
+                }
+            });
+
+            const payload = {
+                id_partido: parseInt(idPartido),
+                goles_local: parseInt(golesLocal),
+                goles_visitante: parseInt(golesVisitante),
+                stats: statsJugadores
+            };
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/guardar_resultados', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert('¡Acta de partido procesada! Estadísticas actualizadas.');
+                    document.getElementById('panel-estadisticas').classList.add('d-none');
+                    document.getElementById('select-resultado').value = "";
+                    cargarPartidosParaBorrar(); // Actualiza los selects automáticamente
+                } else {
+                    alert('Error en el servidor al guardar.');
+                }
+            } catch (error) {
+                alert('No se pudo establecer comunicación con el servidor.');
+            }
+        });
+
+        // Borrar Partido
+        document.getElementById('btn-borrar').addEventListener('click', async () => {
+            const idPartido = document.getElementById('select-borrar').value;
+            if (!idPartido) { alert("No hay ningún partido seleccionado."); return; }
+
+            if (confirm("⚠️ ¿Estás totalmente seguro de eliminar este partido? Esta acción no se puede deshacer.")) {
+                try {
+                    const respuesta = await fetch(`http://127.0.0.1:8000/borrar_partido/${idPartido}`, { method: 'DELETE' });
+                    if (respuesta.ok) {
+                        alert("Partido eliminado correctamente.");
+                        cargarPartidosParaBorrar(); 
+                    } else { alert("Hubo un error al intentar eliminar el partido."); }
+                } catch (error) { alert("Error de conexión al servidor."); }
+            }
+        });
+
+        function renderizarEquiposPorDivision(divisionSeleccionada) {
+            const equiposFiltrados = todosLosEquipos.filter(e => e.division === divisionSeleccionada);
+            const selectLocal = document.getElementById('local');
+            const selectVisitante = document.getElementById('visitante');
+            
+            if (equiposFiltrados.length === 0) {
+                selectLocal.innerHTML = selectVisitante.innerHTML = '<option value="">No hay equipos</option>';
+                return;
+            }
+
+            const opcionesHTML = equiposFiltrados.map(e => `<option value="${e.id_equipo}">${e.nombre_equipo}</option>`).join('');
+            selectLocal.innerHTML = opcionesHTML;
+            selectVisitante.innerHTML = opcionesHTML;
+        }
+
+        // Filtro de División
+        document.getElementById('filtro-division').addEventListener('change', (e) => {
+            renderizarEquiposPorDivision(e.target.value);
+        });
+
+        // Formulario Registro de Partido
+        document.getElementById('form-partido').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const idLocal = document.getElementById('local').value;
+            const idVisitante = document.getElementById('visitante').value;
+
+            if (!idLocal || !idVisitante) { alert('Asegúrate de seleccionar equipos.'); return; }
+            if (idLocal === idVisitante) { alert('❌ Error: El equipo local no puede ser el mismo que el visitante.'); return; }
+
+            const formData = new FormData(e.target);
+            try {
+                const respuesta = await fetch('http://127.0.0.1:8000/registrar_partido', { method: 'POST', body: formData });
+                if (respuesta.ok) {
+                    alert('¡Partido programado y guardado con éxito!');
+                    document.querySelector('input[name="jornada"]').value = parseInt(document.querySelector('input[name="jornada"]').value) + 0;
+                    renderizarEquiposPorDivision(document.getElementById('filtro-division').value);
+                    cargarPartidosParaBorrar(); // Actualiza la lista de pendientes abajo
+                } else { alert('Hubo un problema en el servidor.'); }
+            } catch (error) { alert('No se pudo establecer conexión.'); }
+        });
+
+	// --- LÓGICA PARA REGISTRAR EQUIPOS Y JUGADORES ---
+
+        async function cargarListasIncialesSeguridad() {
+            try {
+                // 1. Cargar divisiones en el formulario de nuevos equipos
+                const resDiv = await fetch('http://127.0.0.1:8000/lista_divisiones').then(r => r.json());
+                document.getElementById('select-division-equipo').innerHTML = resDiv.divisiones.map(d => 
+                    `<option value="${d.id_division}">${d.nombre}</option>`
+                ).join('');
+
+                // 2. Cargar todos los equipos en el formulario de nuevos jugadores
+                const resEq = await fetch('http://127.0.0.1:8000/lista_equipos').then(r => r.json());
+                document.getElementById('select-equipo-jugador').innerHTML = resEq.equipos.map(e => 
+                    `<option value="${e.id_equipo}">${e.nombre_equipo} (${e.division})</option>`
+                ).join('');
+            } catch (error) {
+                console.error("Error al cargar selectores de configuración:", error);
+            }
+        }
+
+        // Evento para guardar nuevo equipo
+        document.getElementById('form-nuevo-equipo').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const res = await fetch('http://127.0.0.1:8000/registrar_equipo', { method: 'POST', body: new FormData(e.target) });
+                if (res.ok) {
+                    alert('🛡️ Equipo registrado con éxito.');
+                    e.target.reset();
+                    // Recargamos los componentes globales para que aparezca en los partidos y jugadores
+                    await cargarEquipos(); 
+                    await cargarListasIncialesSeguridad();
+                }
+            } catch (error) { alert('Error al registrar equipo.'); }
+        });
+
+        // Evento para guardar nuevo jugador
+        document.getElementById('form-nuevo-jugador').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const res = await fetch('http://127.0.0.1:8000/registrar_jugador', { method: 'POST', body: new FormData(e.target) });
+                if (res.ok) {
+                    alert('🏃 Jugador guardado en la base de datos.');
+                    e.target.reset();
+                }
+            } catch (error) { alert('Error al registrar jugador.'); }
+        });
+
+        // Inicializar
+        cargarEquipos();
+        cargarPartidosParaBorrar();
+        cargarListasIncialesSeguridad();
+    </script>
+</body>
+</html>
