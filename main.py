@@ -21,10 +21,11 @@ app.add_middleware(
 def conectar_bd():
     try:
         conexion = mysql.connector.connect(
-            host="localhost",
-            user="liga_admin",
-            password="AdminLiga123",
-            database="liga_dominical"
+            host="bd-ligatoto-liga-dominical.h.aivencloud.com",
+            port=24214,
+            user="avnadmin",
+            password="AVNS_WFnpd1c2ax2fvQzCy1v",
+            database="defaultdb"
         )
         return conexion
     except mysql.connector.Error as err:
