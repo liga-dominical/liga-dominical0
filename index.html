@@ -136,10 +136,10 @@
 
     async function inicializarTablas() {
         Promise.all([
-            fetch('http://127.0.0.1:8000/equipos').then(res => res.json()),
-            fetch('http://127.0.0.1:8000/goleadores').then(res => res.json()),
-            fetch('http://127.0.0.1:8000/asistencias').then(res => res.json()),
-            fetch('http://127.0.0.1:8000/porteros').then(res => res.json())
+            fetch('https://backend-liga-tm8f.onrender.com/equipos').then(res => res.json()),
+            fetch('https://backend-liga-tm8f.onrender.com/goleadores').then(res => res.json()),
+            fetch('https://backend-liga-tm8f.onrender.com/asistencias').then(res => res.json()),
+            fetch('https://backend-liga-tm8f.onrender.com/porteros').then(res => res.json())
         ])
         .then(([datosEquipos, datosGoleadores, datosAsistencias, datosPorteros]) => {
             

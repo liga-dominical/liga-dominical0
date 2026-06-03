@@ -216,7 +216,7 @@
 
         async function cargarEquipos() {
             try {
-                const res = await fetch('http://127.0.0.1:8000/lista_equipos').then(r => r.json());
+                const res = await fetch('https://backend-liga-tm8f.onrender.com/lista_equipos').then(r => r.json());
                 todosLosEquipos = res.equipos;
                 renderizarEquiposPorDivision('Primera División');
             } catch (error) {
@@ -225,7 +225,7 @@
         }
 
         async function renderizarJugadores(idEquipo, idTbody) {
-            const res = await fetch(`http://127.0.0.1:8000/jugadores_equipo/${idEquipo}`).then(r => r.json());
+            const res = await fetch(`https://backend-liga-tm8f.onrender.com/jugadores_equipo/${idEquipo}`).then(r => r.json());
             const tbody = document.getElementById(idTbody);
             
             tbody.innerHTML = res.jugadores.map(j => {
@@ -252,7 +252,7 @@
         // FUNCIONES DE CARGA Y ACTUALIZACIÓN
         async function cargarPartidosParaBorrar() {
             try {
-                const res = await fetch('http://127.0.0.1:8000/todos_los_partidos').then(r => r.json());
+                const res = await fetch('https://backend-liga-tm8f.onrender.com/todos_los_partidos').then(r => r.json());
                 listaPartidosGlobal = res.partidos; // Guardamos globalmente
                 
                 const selectBorrar = document.getElementById('select-borrar');
@@ -330,7 +330,7 @@
             };
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/guardar_resultados', {
+                const response = await fetch('https://backend-liga-tm8f.onrender.com/guardar_resultados', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -356,7 +356,7 @@
 
             if (confirm("⚠️ ¿Estás totalmente seguro de eliminar este partido? Esta acción no se puede deshacer.")) {
                 try {
-                    const respuesta = await fetch(`http://127.0.0.1:8000/borrar_partido/${idPartido}`, { method: 'DELETE' });
+                    const respuesta = await fetch(`https://backend-liga-tm8f.onrender.com/borrar_partido/${idPartido}`, { method: 'DELETE' });
                     if (respuesta.ok) {
                         alert("Partido eliminado correctamente.");
                         cargarPartidosParaBorrar(); 
@@ -396,7 +396,7 @@
 
             const formData = new FormData(e.target);
             try {
-                const respuesta = await fetch('http://127.0.0.1:8000/registrar_partido', { method: 'POST', body: formData });
+                const respuesta = await fetch('https://backend-liga-tm8f.onrender.com/registrar_partido', { method: 'POST', body: formData });
                 if (respuesta.ok) {
                     alert('¡Partido programado y guardado con éxito!');
                     document.querySelector('input[name="jornada"]').value = parseInt(document.querySelector('input[name="jornada"]').value) + 0;
@@ -411,13 +411,13 @@
         async function cargarListasIncialesSeguridad() {
             try {
                 // 1. Cargar divisiones en el formulario de nuevos equipos
-                const resDiv = await fetch('http://127.0.0.1:8000/lista_divisiones').then(r => r.json());
+                const resDiv = await fetch('https://backend-liga-tm8f.onrender.com/lista_divisiones').then(r => r.json());
                 document.getElementById('select-division-equipo').innerHTML = resDiv.divisiones.map(d => 
                     `<option value="${d.id_division}">${d.nombre}</option>`
                 ).join('');
 
                 // 2. Cargar todos los equipos en el formulario de nuevos jugadores
-                const resEq = await fetch('http://127.0.0.1:8000/lista_equipos').then(r => r.json());
+                const resEq = await fetch('https://backend-liga-tm8f.onrender.com/lista_equipos').then(r => r.json());
                 document.getElementById('select-equipo-jugador').innerHTML = resEq.equipos.map(e => 
                     `<option value="${e.id_equipo}">${e.nombre_equipo} (${e.division})</option>`
                 ).join('');
@@ -430,7 +430,7 @@
         document.getElementById('form-nuevo-equipo').addEventListener('submit', async (e) => {
             e.preventDefault();
             try {
-                const res = await fetch('http://127.0.0.1:8000/registrar_equipo', { method: 'POST', body: new FormData(e.target) });
+                const res = await fetch('https://backend-liga-tm8f.onrender.com/registrar_equipo', { method: 'POST', body: new FormData(e.target) });
                 if (res.ok) {
                     alert('🛡️ Equipo registrado con éxito.');
                     e.target.reset();
@@ -445,7 +445,7 @@
         document.getElementById('form-nuevo-jugador').addEventListener('submit', async (e) => {
             e.preventDefault();
             try {
-                const res = await fetch('http://127.0.0.1:8000/registrar_jugador', { method: 'POST', body: new FormData(e.target) });
+                const res = await fetch('https://backend-liga-tm8f.onrender.com/registrar_jugador', { method: 'POST', body: new FormData(e.target) });
                 if (res.ok) {
                     alert('🏃 Jugador guardado en la base de datos.');
                     e.target.reset();
