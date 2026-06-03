@@ -29,7 +29,7 @@
     <script>
         async function cargarDatos() {
             // Cargar jornadas disponibles
-            const resJornadas = await fetch('http://127.0.0.1:8000/jornadas').then(r => r.json());
+            const resJornadas = await fetch('https://backend-liga-tm8f.onrender.com/jornadas').then(r => r.json());
             const selJornada = document.getElementById('sel-jornada');
             resJornadas.jornadas.forEach(j => {
                 selJornada.innerHTML += `<option value="${j.jornada}">Jornada ${j.jornada}</option>`;
@@ -43,7 +43,7 @@
         async function buscarPartidos() {
             const div = document.getElementById('sel-division').value;
             const jor = document.getElementById('sel-jornada').value;
-            const res = await fetch(`http://127.0.0.1:8000/partidos/${div}/${jor}`).then(r => r.json());
+            const res = await fetch(`https://backend-liga-tm8f.onrender.com/partidos/${div}/${jor}`).then(r => r.json());
             
             const cont = document.getElementById('contenedor-partidos');
             cont.innerHTML = '';
