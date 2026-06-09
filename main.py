@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from fastapi import Form
 from fastapi.middleware.cors import CORSMiddleware
 import mysql.connector
+import hashlib
 
 app = FastAPI(title="API Liga Dominical")
 
@@ -355,6 +356,8 @@ def guardar_resultados(datos: DatosResultado):
                     """, (goles_en_contra, stat.id_jugador))
                     
         conexion.commit()
+        # Llamamos al motor de la quiniela para repartir los puntos
+        calcular_puntos_quiniela(datos.id_partido, datos.goles_local, datos.goles_visitante)
         return {"mensaje": "Resultados y estadísticas del acta guardados con éxito"}
     except Exception as e:
         conexion.rollback()
@@ -409,6 +412,196 @@ def registrar_jugador(
         cursor.execute(consulta, (nombre_completo, id_equipo, posicion))
         conexion.commit()
         return {"mensaje": "Jugador registrado con éxito"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conexion.close()
+
+# ==========================================
+# MÓDULO QUINIELA: REGISTRO Y LOGIN
+# ==========================================
+
+def encriptar_password(password: str):
+    # Encripta la contraseña usando SHA-256
+    return hashlib.sha256(password.encode()).hexdigest()
+
+@app.post("/registro_quiniela")
+async def registro_quiniela(nombre: str = Form(...), correo: str = Form(...), password: str = Form(...)):
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+    try:
+        pw_hash = encriptar_password(password)
+        cursor.execute(
+            "INSERT INTO usuarios_quiniela (nombre_completo, correo, contrasena) VALUES (%s, %s, %s)",
+            (nombre, correo, pw_hash)
+        )
+        conexion.commit()
+        return {"mensaje": "¡Cuenta creada con éxito!"}
+    except mysql.connector.IntegrityError:
+        raise HTTPException(status_code=400, detail="Este correo ya está registrado en la quiniela.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conexion.close()
+
+@app.post("/login_quiniela")
+async def login_quiniela(correo: str = Form(...), password: str = Form(...)):
+    conexion = conectar_bd()
+    cursor = conexion.cursor(dictionary=True)
+    try:
+        pw_hash = encriptar_password(password)
+        cursor.execute(
+            "SELECT id_usuario, nombre_completo, puntos_totales FROM usuarios_quiniela WHERE correo = %s AND contrasena = %s",
+            (correo, pw_hash)
+        )
+        usuario = cursor.fetchone()
+        
+        if usuario:
+            return {"mensaje": "Login exitoso", "usuario": usuario}
+        else:
+            raise HTTPException(status_code=401, detail="Correo o contraseña incorrectos.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conexion.close()
+
+# Modelos para recibir las predicciones en lote
+class Prediccion(BaseModel):
+    id_partido: int
+    goles_local: int
+    goles_visitante: int
+
+class PayloadPredicciones(BaseModel):
+    id_usuario: int
+    predicciones: List[Prediccion]
+
+@app.get("/partidos_quiniela")
+async def partidos_quiniela():
+    conexion = conectar_bd()
+    cursor = conexion.cursor(dictionary=True)
+    try:
+        # Solo traemos los partidos que tienen estatus 'Programado'
+        cursor.execute("""
+            SELECT p.id_partido, p.jornada, p.dia, p.hora, 
+                   el.nombre_equipo AS local, ev.nombre_equipo AS visitante
+            FROM partidos p
+            JOIN equipos el ON p.id_local = el.id_equipo
+            JOIN equipos ev ON p.id_visitante = ev.id_equipo
+            WHERE p.estatus = 'Programado'
+        """)
+        partidos = cursor.fetchall()
+        return {"partidos": partidos}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conexion.close()
+
+@app.post("/guardar_predicciones")
+async def guardar_predicciones(payload: PayloadPredicciones):
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+    try:
+        for pred in payload.predicciones:
+            # Revisamos si el usuario ya había apostado en este partido (por si quiere cambiar su marcador antes de que empiece)
+            cursor.execute("SELECT id_prediccion FROM predicciones WHERE id_usuario = %s AND id_partido = %s", 
+                           (payload.id_usuario, pred.id_partido))
+            existe = cursor.fetchone()
+            
+            if existe:
+                cursor.execute("""
+                    UPDATE predicciones SET pred_goles_local = %s, pred_goles_visitante = %s 
+                    WHERE id_prediccion = %s
+                """, (pred.goles_local, pred.goles_visitante, existe[0]))
+            else:
+                cursor.execute("""
+                    INSERT INTO predicciones (id_usuario, id_partido, pred_goles_local, pred_goles_visitante)
+                    VALUES (%s, %s, %s, %s)
+                """, (payload.id_usuario, pred.id_partido, pred.goles_local, pred.goles_visitante))
+        conexion.commit()
+        return {"mensaje": "¡Pronósticos guardados correctamente!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conexion.close()
+
+def calcular_puntos_quiniela(id_partido, goles_l_real, goles_v_real):
+    print("\n--- INICIANDO MOTOR DE QUINIELA ---")
+    print(f"Partido ID: {id_partido} | Marcador Oficial: {goles_l_real} - {goles_v_real}")
+    conexion = conectar_bd()
+    cursor = conexion.cursor(dictionary=True)
+    try:
+        # Usamos 0 en lugar de FALSE por compatibilidad estricta con MySQL
+        cursor.execute("SELECT * FROM predicciones WHERE id_partido = %s AND procesada = 0", (id_partido,))
+        predicciones = cursor.fetchall()
+        print(f"-> Predicciones encontradas sin procesar: {len(predicciones)}")
+        
+        for p in predicciones:
+            puntos = 0
+            print(f"\nRevisando Jugador ID {p['id_usuario']} | Su pronóstico: {p['pred_goles_local']} - {p['pred_goles_visitante']}")
+            
+            # 1. Marcador exacto
+            if p['pred_goles_local'] == goles_l_real and p['pred_goles_visitante'] == goles_v_real:
+                puntos = 5
+                print("   Resultado: ¡Marcador exacto! (+5 Pts)")
+            # 2. Ganador o empate
+            elif (p['pred_goles_local'] > p['pred_goles_visitante'] and goles_l_real > goles_v_real) or \
+                 (p['pred_goles_local'] < p['pred_goles_visitante'] and goles_l_real < goles_v_real) or \
+                 (p['pred_goles_local'] == p['pred_goles_visitante'] and goles_l_real == goles_v_real):
+                puntos = 3
+                print("   Resultado: ¡Atinó al ganador/empate! (+3 Pts)")
+            else:
+                print("   Resultado: Falló el pronóstico. (0 Pts)")
+                
+            # Marcamos como procesada (1) y asignamos puntos
+            cursor.execute("UPDATE predicciones SET puntos_obtenidos = %s, procesada = 1 WHERE id_prediccion = %s", 
+                           (puntos, p['id_prediccion']))
+            cursor.execute("UPDATE usuarios_quiniela SET puntos_totales = puntos_totales + %s WHERE id_usuario = %s", 
+                           (puntos, p['id_usuario']))
+        
+        conexion.commit()
+        print("--- MOTOR DE QUINIELA FINALIZADO CORRECTAMENTE ---\n")
+    except Exception as e:
+        print(f"❌ ERROR en el motor de quiniela: {e}")
+    finally:
+        cursor.close()
+        conexion.close()
+
+@app.get("/ranking_quiniela")
+async def ranking_quiniela():
+    conexion = conectar_bd()
+    cursor = conexion.cursor(dictionary=True)
+    try:
+        # Traemos a los usuarios ordenados por puntos (el que tenga más va primero)
+        cursor.execute("""
+            SELECT nombre_completo, puntos_totales 
+            FROM usuarios_quiniela 
+            ORDER BY puntos_totales DESC, nombre_completo ASC
+        """)
+        ranking = cursor.fetchall()
+        return {"ranking": ranking}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conexion.close()
+
+@app.get("/mis_predicciones/{id_usuario}")
+async def mis_predicciones(id_usuario: int):
+    conexion = conectar_bd()
+    cursor = conexion.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT id_partido, pred_goles_local, pred_goles_visitante 
+            FROM predicciones 
+            WHERE id_usuario = %s
+        """, (id_usuario,))
+        predicciones = cursor.fetchall()
+        return {"predicciones": predicciones}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:

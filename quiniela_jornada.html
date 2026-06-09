@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Quiniela - Osone Go</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #121212; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .match-card { background-color: #1e1e1e; border: 1px solid #333; border-radius: 12px; margin-bottom: 15px; transition: 0.3s; }
+        .team-name { font-weight: bold; font-size: 1.1rem; }
+        .score-input { width: 60px; text-align: center; font-size: 1.2rem; font-weight: bold; background-color: #2a2a2a; color: #00d2ff; border: 1px solid #444; border-radius: 8px; }
+        .score-input:focus { border-color: #00d2ff; box-shadow: none; outline: none; }
+        .score-input:disabled { background-color: #1a3a3a; color: #00ffcc; border-color: #00ffcc; opacity: 1; }
+        .brand-text { color: #00d2ff; }
+        .bloqueado { border: 1px solid #00ffcc; opacity: 0.85; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark shadow-sm">
+    <div class="container d-flex justify-content-between align-items-center">
+        <span class="navbar-brand mb-0 h1 brand-text">⚽ Quiniela Osone Go</span>
+        <div class="text-end">
+            <span id="nombre-usuario" class="me-3 fw-bold text-light d-none d-md-inline"></span>
+            <span class="badge bg-warning text-dark fs-6 me-3" id="puntos-usuario">0 Pts</span>
+            <a href="quiniela_ranking.html" class="btn btn-sm btn-outline-info me-2">🏆 Ranking</a>
+            <button class="btn btn-sm btn-outline-danger" onclick="cerrarSesion()">Salir</button>
+        </div>
+    </div>
+</nav>
+
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4>Partidos Disponibles</h4>
+        <button class="btn btn-primary fw-bold px-4" id="btn-guardar">Guardar Predicciones</button>
+    </div>
+
+    <div id="lista-partidos">
+        <div class="text-center text-muted mt-5">Cargando partidos de la jornada...</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const API_URL = 'https://tu-proyecto-backend.onrender.com';
+    let usuarioActual = null;
+
+    function verificarSesion() {
+        const sesion = sessionStorage.getItem('quiniela_usuario');
+        if (!sesion) {
+            window.location.href = 'quiniela_login.html';
+            return false;
+        }
+        usuarioActual = JSON.parse(sesion);
+        document.getElementById('nombre-usuario').innerText = usuarioActual.nombre_completo;
+        document.getElementById('puntos-usuario').innerText = `${usuarioActual.puntos_totales} Pts`;
+        return true;
+    }
+
+    async function cargarPartidos() {
+        try {
+            const res = await fetch(`${API_URL}/partidos_quiniela`).then(r => r.json());
+            const contenedor = document.getElementById('lista-partidos');
+            
+            if (res.partidos.length === 0) {
+                contenedor.innerHTML = `<div class="alert alert-info text-center">No hay partidos programados en este momento.</div>`;
+                return;
+            }
+
+            contenedor.innerHTML = res.partidos.map(p => `
+                <div class="card match-card p-3 shadow-sm fila-partido" id="tarjeta-${p.id_partido}" data-id="${p.id_partido}">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">Jornada ${p.jornada}</small>
+                        <small class="text-info">${p.dia || 'Por definir'} - ${p.hora || 'Por definir'}</small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="text-end" style="flex: 1;"><span class="team-name">${p.local}</span></div>
+                        <div class="px-3 d-flex align-items-center">
+                            <input type="number" class="score-input input-local" min="0" value="0">
+                            <span class="mx-2 fw-bold text-muted">-</span>
+                            <input type="number" class="score-input input-visitante" min="0" value="0">
+                        </div>
+                        <div class="text-start" style="flex: 1;"><span class="team-name">${p.visitante}</span></div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Después de pintar los partidos, buscamos si el usuario ya los había pronosticado
+            cargarMisPredicciones();
+
+        } catch (error) {
+            document.getElementById('lista-partidos').innerHTML = '<div class="text-danger">Error al cargar la jornada.</div>';
+        }
+    }
+
+    async function cargarMisPredicciones() {
+        try {
+            const res = await fetch(`${API_URL}/mis_predicciones/${usuarioActual.id_usuario}`).then(r => r.json());
+            
+            res.predicciones.forEach(pred => {
+                const tarjeta = document.getElementById(`tarjeta-${pred.id_partido}`);
+                if (tarjeta) {
+                    const inputLocal = tarjeta.querySelector('.input-local');
+                    const inputVisita = tarjeta.querySelector('.input-visitante');
+                    
+                    // Colocar los valores que vienen de la base de datos
+                    inputLocal.value = pred.pred_goles_local;
+                    inputVisita.value = pred.pred_goles_visitante;
+                    
+                    // Bloquear los inputs para que no se puedan modificar
+                    inputLocal.disabled = true;
+                    inputVisita.disabled = true;
+                    
+                    // Cambiar el diseño de la tarjeta para indicar que está guardada
+                    tarjeta.classList.add('bloqueado');
+                }
+            });
+        } catch (error) { console.error("Error cargando predicciones guardadas", error); }
+    }
+
+    document.getElementById('btn-guardar').addEventListener('click', async () => {
+        const predicciones = [];
+        
+        document.querySelectorAll('.fila-partido').forEach(fila => {
+            const inputLocal = fila.querySelector('.input-local');
+            const inputVisita = fila.querySelector('.input-visitante');
+            
+            // Solo enviamos las predicciones que NO estén bloqueadas
+            if (!inputLocal.disabled) {
+                const id_partido = parseInt(fila.dataset.id);
+                const goles_local = parseInt(inputLocal.value) || 0;
+                const goles_visitante = parseInt(inputVisita.value) || 0;
+                predicciones.push({ id_partido, goles_local, goles_visitante });
+            }
+        });
+
+        if (predicciones.length === 0) {
+            alert('No hay predicciones nuevas por guardar.');
+            return;
+        }
+
+        const payload = {
+            id_usuario: usuarioActual.id_usuario,
+            predicciones: predicciones
+        };
+
+        try {
+            const response = await fetch(`${API_URL}/guardar_predicciones`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert('¡Tus pronósticos se han bloqueado y guardado con éxito!');
+                location.reload(); // Recargamos para que se bloqueen visualmente
+            } else { alert('Hubo un error al guardar.'); }
+        } catch (error) { alert('Fallo de conexión.'); }
+    });
+
+    function cerrarSesion() {
+        sessionStorage.removeItem('quiniela_usuario');
+        window.location.href = 'quiniela_login.html';
+    }
+
+    if (verificarSesion()) {
+        cargarPartidos();
+    }
+</script>
+</body>
+</html>
