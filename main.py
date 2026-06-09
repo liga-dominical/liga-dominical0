@@ -607,3 +607,26 @@ async def mis_predicciones(id_usuario: int):
     finally:
         cursor.close()
         conexion.close()
+
+@app.post("/cerrar_y_reiniciar_jornada/{jornada}")
+async def cerrar_y_reiniciar_jornada(jornada: int):
+    conexion = conectar_bd()
+    cursor = conexion.cursor()
+    try:
+        # 1. Tomamos la "fotografía" y la mandamos al historial
+        cursor.execute("""
+            INSERT INTO historial_quiniela (id_usuario, jornada, puntos_jornada)
+            SELECT id_usuario, %s, puntos_totales FROM usuarios_quiniela
+        """, (jornada,))
+
+        # 2. Reiniciamos a 0 el ranking activo
+        cursor.execute("UPDATE usuarios_quiniela SET puntos_totales = 0")
+
+        conexion.commit()
+        return {"mensaje": f"Jornada {jornada} respaldada con éxito. Ranking reiniciado a 0."}
+    except Exception as e:
+        conexion.rollback()
+        raise HTTPException(status_code=500, detail=f"Error en la transacción: {e}")
+    finally:
+        cursor.close()
+        conexion.close()

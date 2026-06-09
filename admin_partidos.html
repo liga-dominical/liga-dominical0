@@ -196,11 +196,19 @@
                     </div>
                 </div>
             </div>
+
+           
             
             <div class="text-end mt-4">
                 <button id="btn-guardar-resultados" class="btn btn-success btn-lg px-5 shadow">Guardar Acta del Partido</button>
             </div>
         </div>
+    </div>
+
+    <div class="container mt-3 text-end">
+        <button class="btn btn-danger fw-bold shadow-sm" onclick="solicitarCierreJornada()">
+            📦 Cerrar Jornada y Reiniciar
+        </button>
     </div>
 
     <script>
@@ -457,6 +465,36 @@
         cargarEquipos();
         cargarPartidosParaBorrar();
         cargarListasIncialesSeguridad();
+
+async function solicitarCierreJornada() {
+    const numeroJornada = prompt("¿Qué número de jornada deseas cerrar y respaldar? (Ej. 1, 2, 3):");
+
+    if (!numeroJornada || isNaN(numeroJornada)) {
+        alert("Operación cancelada. Debes introducir un número válido.");
+        return;
+    }
+
+    const confirmar = confirm(`¿Seguro que quieres cerrar la Jornada ${numeroJornada}? El ranking volverá a 0 y los puntos actuales se irán al historial.`);
+
+    if (confirmar) {
+        try {
+            const response = await fetch(`${API_URL}/cerrar_y_reiniciar_jornada/${numeroJornada}`, {
+                method: 'POST'
+            });
+
+            const resultado = await response.json();
+
+            if (response.ok) {
+                alert(`¡Éxito! ${resultado.mensaje}`);
+                location.reload();
+            } else {
+                alert(`Error: ${resultado.detail}`);
+            }
+        } catch (error) {
+            alert("Error de conexión con el servidor.");
+        }
+    }
+}
     </script>
 </body>
 </html>
